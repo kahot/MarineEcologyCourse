@@ -5,95 +5,106 @@ library(colorspace)
 ### 
 
 #Hawaii data #every 30 minutes
-kaneFeb<-read.csv("Data/PacIOOS_CDIP198_202001312338_202003010021.csv", stringsAsFactors = F)
-kaneAug<-read.csv("Data/PacIOOS_CDIP198_202007312340_202008271419.csv", stringsAsFactors = F)
-kaneFeb<-kaneFeb[-1,]
-kaneAug<-kaneAug[-1,]
+HIFeb<-read.csv("Data/PacIOOS_WQB-04_202001312338_202003010006.csv", stringsAsFactors = F)
+HIAug<-read.csv("Data/PacIOOS_WQB-04_202007281538_202008271621.csv", stringsAsFactors = F)
 
-colnames(kaneAug)<-c("HST","Hawaii")
-colnames(kaneFeb)<-c("HST","Hawaii")
+#temp only
+hiFeb<-HIFeb[,1:2]
+hiAug<-HIAug[,1:2]
+
+colnames(hiAug)<-c("HST","Hawaii")
+colnames(hiFeb)<-c("HST","Hawaii")
 
 #change to date format 
 #find out the different time zones use OlsonNames()
 OlsonNames()
-kaneAug$HST<-as.POSIXct(kaneAug$HST,tz="US/Hawaii")
-kaneFeb$HST<-as.POSIXct(kaneFeb$HST,tz="US/Hawaii")
-#remove seconds
-#kaneAug$HST<-format(kaneAug$HST,format='%Y-%m-%d %H:%M')
-#kaneFeb$HST<-format(kaneFeb$HST,format='%Y-%m-%d %H:%M')
+hiAug$HST<-as.POSIXct(hiAug$HST,tz="US/Hawaii")
+hiFeb$HST<-as.POSIXct(hiFeb$HST,tz="US/Hawaii")
 
 #Convert to PST
-kaneAug$PST<-with_tz(kaneAug$HST, "US/Pacific")
-kaneFeb$PST<-with_tz(kaneFeb$HST, "US/Pacific")
+hiAug$PST<-with_tz(hiAug$HST, "US/Pacific")
+hiFeb$PST<-with_tz(hiFeb$HST, "US/Pacific")
 
 
 # Read the Morro Bay data
-morro<-read.csv("Data/edu_calpoly_marine_morro_5536_d855_a740.csv",stringsAsFactors = F, skip=1)
-morro<-morro[,-3]
+CA<-read.csv("Data/mlml_mlml_sea_5536_d855_a740.csv",stringsAsFactors = F, skip=1)
+#remove the 3rd column
+CA<-CA[,-3]
 
+#Average temperature so far.
+mean(CA$degree_Celsius, na.rm = T) #13.3
+min(CA$degree_Celsius, na.rm=T) #-8.9159
 #change to date format (need to remove T and Z)
-morro$UTC<-gsub("T"," ", morro$UTC)
-morro$UTC<-gsub("Z","", morro$UTC)
+CA$UTC<-gsub("T"," ", CA$UTC)
+CA$UTC<-gsub("Z","",  CA$UTC)
 
-#Change the time to time object
-morro$UTC<-as.POSIXct(morro$UTC,tz="GMT")
+#Change the time to 'time object'
+CA$UTC<-as.POSIXct(CA$UTC,tz="GMT")
+
+#Select this year's data only
+CA<-CA[CA$UTC>='2020-01-01',]
+write.csv(CA, "Output/MLML_2020_temp.csv")
+
+#minimum temperature
+min(CA$degree_Celsius, na.rm = T) -3.514165
+CA[which.min(CA$degree_Celsius),]
+#                       UTC degree_Celsius
+#924036 2020-06-23 22:02:56      -3.514165
 
 #Change the column name
-colnames(morro)[2]<-"MorroBay"
+colnames(CA)[2]<-"ML"
 
 #change the time to PST
-morro$PST<-with_tz(morro$UTC, "US/Pacific")
+CA$PST<-with_tz(CA$UTC, "US/Pacific")
 
-#select this year's data only
-morro<-morro[morro$UTC>="2020-01-01",]
 
-#Adjust Morro Bay date format
-morro$PST<-format(morro$PST,format='%Y-%m-%d %H:%M')
-morro$PST<-as.POSIXct(morro$PST)
-#subtracy a minute
-morro$PST<-morro$PST-60
-
+#Adjust Morro Bay date format to get rid of the seconds
+CA$PST<-format(CA$PST,format='%Y-%m-%d %H:%M')
+CA$PST<-as.POSIXct(CA$PST)
 
 #select August 2020
-morroAug<-morro[morro$UTC>="2020-08-01",]
+caAug<-CA[CA$PST>="2020-08-01",]
 #select Feb 2020
-morroFeb<-morro[morro$UTC>="2020-02-01"&morro$UTC<"2020-03-01",]
+caFeb<-CA[CA$PST>="2020-02-01"& CA$PST<"2020-03-01",]
 
-write.csv(morroFeb,"Output/MorroBay_Feb.csv", row.names = F)
-write.csv(morroAug,"Output/MorroBay_Aug.csv", row.names = F)
+#August is 2 mintues off
+caAug$PST<-caAug$PST-120
+#Feb is 1 mintue off
+caFeb$PST<-caFeb$PST-60
 
-#Morro has every 15 minutes, but Kaneohe has every 30 minutes. 
+
+write.csv(caFeb,"Output/ML_Feb.csv", row.names = F)
+write.csv(caAug,"Output/ML_Aug.csv", row.names = F)
+
+#CA has every 5 minutes, but HI has every 15 minutes. 
 #Select the minutes 0 and 30 from Morro Bay data
-keep<-(minute(morroAug$PST)==0|minute(morroAug$PST)==30)
-morroAug<-morroAug[keep,]
+keep<-(minute(caAug$PST)==0|minute(caAug$PST)==15|minute(caAug$PST)==30|minute(caAug$PST)==45)
+caAug<-caAug[keep,]
 
-keep<-(minute(morroFeb$PST)==0|minute(morroFeb$PST)==30)
-morroFeb<-morroFeb[keep,]
+keep<-(minute(caFeb$PST)==0|minute(caFeb$PST)==15|minute(caFeb$PST)==30|minute(caFeb$PST)==45)
+caFeb<-caFeb[keep,]
 
-#alternatively, we can just keep the dates that appear in Hawaii data file
-#morroAug<-morroAug[morroAug$PST %in%kaneAug$PST, ]
+write.csv(caFeb,"Output/MLML_Feb_15min.csv", row.names = F)
+write.csv(caAug,"Output/MLML_Aug_15min.csv", row.names = F)
 
-
-write.csv(morroFeb,"Output/MorroBay_Feb_30min.csv", row.names = F)
-write.csv(morroAug,"Output/MorroBay_Aug_30min.csv", row.names = F)
-
-write.csv(kaneFeb,"Output/KaneoheBay_Feb.csv", row.names = F)
-write.csv(kaneAug,"Output/KaneoheBay_Aug.csv", row.names = F)
-
-#Combine morro and kaneohe data
+write.csv(kaneFeb,"Output/HiloBay_Feb.csv", row.names = F)
+write.csv(kaneAug,"Output/HiloBay_Aug.csv", row.names = F)
 
 
-summer<-merge(morroAug[,2:3],kaneAug[,2:3], by="PST", all=T)
-winter<-merge(morroFeb[,2:3],kaneFeb[,2:3], by="PST", all=T)
+
+
+#Combine CA and HI data
+summer<-merge(caAug[,2:3],hiAug[,2:3], by="PST", all=T)
+winter<-merge(caFeb[,2:3],hiFeb[,2:3], by="PST", all=T)
     
-#plot(summer$PST,summer$MorroBay, pch=16, col="purple", cex=0.5, ylim=c(10,30),
+#plot(summer$PST,summer$ML, pch=16, col="purple", cex=0.5, ylim=c(10,30),
 #     ylab="Temperature", xlab="")
 #points(summer$PST,summer$Hawaii, pch=16, cex=.5, col="blue")
 
-mean(summer$MorroBay, na.rm = T)
+mean(summer$ML, na.rm = T)
 mean(summer$Hawaii, na.rm = T)
-mean(winter$MorroBay, na.rm = T)#13.10609
-mean(winter$Hawaii, na.rm = T)#24.37853
+mean(winter$ML, na.rm = T)#12.41498
+mean(winter$Hawaii, na.rm = T)#24.21587
 
 sum.m<-melt(summer, id.vars = "PST")
 colnames(sum.m)[2:3]<-c("Site", "Temperature")
@@ -116,20 +127,42 @@ ggplot(sum.m, aes(x=PST, y=Temperature, color=Site))+
 
 ggplot(sum.m, aes(x=PST, y=Temperature, color=Site))+
     geom_line()+
-    scale_color_manual(values=cols[c(1,4)])+
+    scale_color_manual(values=cols[c(4,1)], labels=c("Moss Landing","Hilo"))+
     ylab(expression('Temperature ('*~degree*C*')'))+
     theme_bw()+
     labs(x="")+
     theme(legend.title = element_blank())
-ggsave("Output/MorroBay_KaneoheBay_Temp_Aug.pdf", width = 5, height = 3)
+ggsave("Output/ML_Hilo_Temp_Aug.pdf", width = 5, height = 3)
 
 #For Feb
-
 ggplot(win.m, aes(x=PST, y=Temperature, color=Site))+
     geom_line()+
-    scale_color_manual(values=cols[c(1,4)])+
+    scale_color_manual(values=cols[c(4,1)], labels=c("Moss Landing","Hilo"))+
     ylab(expression('Temperature ('*~degree*C*')'))+
     theme_bw()+
     labs(x="")+
     theme(legend.title = element_blank())
-ggsave("Output/MorroBay_KaneoheBay_Temp_Feb.pdf", width = 5, height = 3)
+
+min(CA$ML)
+ggsave("Output/ML_Hilo_Temp_Feb.pdf", width = 5, height = 3)
+
+
+## Averages
+summary<-data.frame(Site=c("HI","HI","CA","CA"))
+summary$month<-c("Aug","Feb","Aug","Feb")
+
+summary$mean<-c(mean(hiAug$Hawaii, na.rm=T),mean(hiFeb$Hawaii, na.rm=T), 
+                mean(caAug$ML, na.rm=T),mean(caFeb$ML, na.rm=T))
+summary$SD<-c(sd(hiAug$Hawaii, na.rm=T),sd(hiFeb$Hawaii, na.rm=T), 
+              sd(caAug$ML, na.rm=T),sd(caFeb$ML, na.rm=T))
+
+ggplot(summary, aes(x=Site, y=mean, color=Site, shape=month))+
+    geom_point(position=position_dodge(width=0.5),size=2)+
+    scale_color_manual(values=cols[c(4,1)])+
+    scale_shape_manual(values=c(19,17))+
+    geom_errorbar(aes(ymin=mean-SD, ymax=mean+SD), width=.2, size=.2,
+                  position=position_dodge(width=0.5))+
+    theme_bw()+
+    labs(x="")+ylab(expression('Temperature ('*~degree*C*')'))+
+    theme(legend.title = element_blank())
+ggsave("Output/ML_Hilo_AverageTemp.pdf",width=3.5, height = 3)

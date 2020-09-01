@@ -44,7 +44,7 @@ ggplot(env,aes(x=Date, y=Temp, color=Site))+
     theme(axis.text.x = element_text(size =6, angle=90, hjust=1, color="gray20"), axis.ticks.x=element_blank())+
     theme(panel.background = element_rect(color="white"))+
     theme(panel.grid.major.y = element_line(color="gray60", linetype=2,size=0.2))
-
+ggsave("Output/Temperature_comparison.pdf", width = 8, height = 3.5)
 
 
 ggplot(env,aes(x=Date, y=Lux, color=Site))+
@@ -55,4 +55,5 @@ ggplot(env,aes(x=Date, y=Lux, color=Site))+
     theme(axis.text.x = element_text(size =6, angle=90, hjust=1, color="gray20"), axis.ticks.x=element_blank())+
     theme(panel.background = element_rect(color="white"))+
     theme(panel.grid.major.y = element_line(color="gray60", linetype=2,size=0.2)) 
+ggsave("Output/LUX_comparison.pdf", width = 8, height = 3.5)
 
