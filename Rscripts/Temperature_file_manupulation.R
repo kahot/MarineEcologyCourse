@@ -4,7 +4,7 @@ library(ggplot2)
 library(colorspace)
 ### 
 
-#Hawaii data #every 30 minutes
+#Hawaii data #every 15 minutes
 HIFeb<-read.csv("Data/PacIOOS_WQB-04_202001312338_202003010006.csv", stringsAsFactors = F)
 HIAug<-read.csv("Data/PacIOOS_WQB-04_202007281538_202008271621.csv", stringsAsFactors = F)
 
@@ -87,63 +87,77 @@ caFeb<-caFeb[keep,]
 write.csv(caFeb,"Output/MLML_Feb_15min.csv", row.names = F)
 write.csv(caAug,"Output/MLML_Aug_15min.csv", row.names = F)
 
-write.csv(kaneFeb,"Output/HiloBay_Feb.csv", row.names = F)
-write.csv(kaneAug,"Output/HiloBay_Aug.csv", row.names = F)
+hiAug<-hiAug[hiAug$PST>="2020-08-01"]
+
+write.csv(hiFeb,"Output/HiloBay_Feb.csv", row.names = F)
+write.csv(hiAug,"Output/HiloBay_Aug.csv", row.names = F)
 
 
 
 
 #Combine CA and HI data
-summer<-merge(caAug[,2:3],hiAug[,2:3], by="PST", all=T)
-winter<-merge(caFeb[,2:3],hiFeb[,2:3], by="PST", all=T)
+#don't change the time
+colnames(hiAug)[1]<-"Date"
+colnames(hiFeb)[1]<-"Date"
+colnames(caAug)[3]<-"Date"
+colnames(caFeb)[3]<-"Date"
+
+summer<-merge(caAug[,2:3],hiAug[,1:2], by="Date")
+winter<-merge(caFeb[,2:3],hiFeb[,1:2], by="Date")
     
 #plot(summer$PST,summer$ML, pch=16, col="purple", cex=0.5, ylim=c(10,30),
 #     ylab="Temperature", xlab="")
 #points(summer$PST,summer$Hawaii, pch=16, cex=.5, col="blue")
 
-mean(summer$ML, na.rm = T)
-mean(summer$Hawaii, na.rm = T)
-mean(winter$ML, na.rm = T)#12.41498
-mean(winter$Hawaii, na.rm = T)#24.21587
+temp.sum<-data.frame(Site=c("CA-summer","HI-summer","CA-winter","HI-winter"))
+temp.sum$Ave.temp<-c(mean(summer$ML, na.rm = T), mean(summer$Hawaii, na.rm = T),
+                    mean(winter$ML, na.rm = T), mean(winter$Hawaii, na.rm = T))
 
-sum.m<-melt(summer, id.vars = "PST")
+
+temp.sum$SD<-c(sd(summer$ML, na.rm = T), sd(summer$Hawaii, na.rm = T),
+               sd(winter$ML, na.rm = T), sd(winter$Hawaii, na.rm = T))
+write.csv(temp.sum,"Output/ML-HI_temperature_summary.csv")
+
+sum.m<-melt(summer, id.vars = "Date")
 colnames(sum.m)[2:3]<-c("Site", "Temperature")
 
-win.m<-melt(winter, id.vars = "PST")
+win.m<-melt(winter, id.vars = "Date")
 colnames(win.m)[2:3]<-c("Site", "Temperature")
 
 
 cols<-qualitative_hcl(5, palette="Dark3")
 hcl_palettes(plot = TRUE)
 
-ggplot(sum.m, aes(x=PST, y=Temperature, color=Site))+
-    geom_point(size =1)+
-    scale_color_manual(values=cols[c(1,4)])+
-    ylab(expression('Temperature ('*~degree*C*')'))+
-    theme_bw()+
-    labs(x="")+
-    theme(legend.title = element_blank())
+#ggplot(sum.m, aes(x=Date, y=Temperature, color=Site))+
+#    geom_point(size =1)+
+#    scale_color_manual(values=cols[c(1,4)])+
+#    ylab(expression('Temperature ('*~degree*C*')'))+
+#    theme_bw()+
+#    labs(x="")+
+#    theme(legend.title = element_blank())
+#
 
-
-ggplot(sum.m, aes(x=PST, y=Temperature, color=Site))+
+ggplot(sum.m, aes(x=Date, y=Temperature, color=Site))+
     geom_line()+
     scale_color_manual(values=cols[c(4,1)], labels=c("Moss Landing","Hilo"))+
     ylab(expression('Temperature ('*~degree*C*')'))+
     theme_bw()+
     labs(x="")+
+    geom_hline(yintercept=temp.sum$Ave.temp[1:2], color="gray", linetype = "dashed")+
     theme(legend.title = element_blank())
 ggsave("Output/ML_Hilo_Temp_Aug.pdf", width = 5, height = 3)
 
 #For Feb
-ggplot(win.m, aes(x=PST, y=Temperature, color=Site))+
+ggplot(win.m, aes(x=Date, y=Temperature, color=Site))+
     geom_line()+
     scale_color_manual(values=cols[c(4,1)], labels=c("Moss Landing","Hilo"))+
     ylab(expression('Temperature ('*~degree*C*')'))+
     theme_bw()+
     labs(x="")+
+    geom_hline(yintercept=temp.sum$Ave.temp[3:4], color="gray", linetype = "dashed")+
     theme(legend.title = element_blank())
 
-min(CA$ML)
+
 ggsave("Output/ML_Hilo_Temp_Feb.pdf", width = 5, height = 3)
 
 
